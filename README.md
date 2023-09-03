@@ -1,7 +1,9 @@
 # Alpaca Lora 4bit
+
 Made some adjust for the code in peft and gptq for llama, and make it possible for lora finetuning with a 4 bits base model. The same adjustment can be made for 2, 3 and 8 bits.
 
 # Install Manual
+
 ```
 git clone https://github.com/johnsmith0031/alpaca_lora_4bit.git
 cd alpaca_lora_4bit
@@ -11,6 +13,7 @@ pip install .
 ```
 
 To uninstall and reinstall, run:
+
 ```
 cd alpaca_lora_4bit
 pip uninstall alpaca_lora_4bit
@@ -20,7 +23,7 @@ pip install .
 
 # Docker
 
-*note: Currently does not work*
+_note: Currently does not work_
 
 ## Quick start for running the chat UI
 
@@ -30,38 +33,41 @@ cd alpaca_lora_4bit
 DOCKER_BUILDKIT=1 docker build -t alpaca_lora_4bit . # build step can take 12 min
 docker run --gpus=all -p 7860:7860 alpaca_lora_4bit
 ```
+
 Point your browser to http://localhost:7860
 
 ## Results
-It's fast on a 3070 Ti mobile.  Uses 5-6 GB of GPU RAM.
+
+It's fast on a 3070 Ti mobile. Uses 5-6 GB of GPU RAM.
 
 ![](alpaca_lora_4bit_penguin_fact.gif)
 
 # Update Logs
-* Resolved numerically unstable issue
-* Reconstruct fp16 matrix from 4bit data and call torch.matmul largely increased the inference speed.
-* Added install script for windows and linux.
-* Added Gradient Checkpointing. Now It can finetune 30b model 4bit on a single GPU with 24G VRAM with Gradient Checkpointing enabled. (finetune.py updated) (but would reduce training speed, so if having enough VRAM this option is not needed)
-* Added install manual by s4rduk4r
-* Added pip install support by sterlind, preparing to merge changes upstream
-* Added V2 model support (with groupsize, both inference + finetune)
-* Added some options on finetune: set default to use eos_token instead of padding, add resume_checkpoint to continue training
-* Added offload support. load_llama_model_4bit_low_ram_and_offload_to_cpu function can be used.
-* Added monkey patch for text generation webui for fixing initial eos token issue.
-* Added Flash attention support. (Use --flash-attention)
-* Added Triton backend to support model using groupsize and act-order. (Use --backend=triton)
-* Added g_idx support in cuda backend (need recompile cuda kernel)
-* Added xformers support
-* Removed triton, flash-atten from requirements.txt for compatibility
-* Removed bitsandbytes from requirements
-* Added pip installable branch based on winglian's PR
-* Added Model server for better inference performance with webui (40% faster than original webui which runs model and gradio in same process)
-* Added cuda backend quant attention and fused mlp from GPTQ_For_Llama.
-* Added lora patch for GPTQ_For_Llama repo triton backend.
-* Added support for llama2 GQA
-* Added support for flash attention 2
-* Updated install manual
-* Changed block size from 256 to 128 to support more 4bit models<br>
+
+- Resolved numerically unstable issue
+- Reconstruct fp16 matrix from 4bit data and call torch.matmul largely increased the inference speed.
+- Added install script for windows and linux.
+- Added Gradient Checkpointing. Now It can finetune 30b model 4bit on a single GPU with 24G VRAM with Gradient Checkpointing enabled. (finetune.py updated) (but would reduce training speed, so if having enough VRAM this option is not needed)
+- Added install manual by s4rduk4r
+- Added pip install support by sterlind, preparing to merge changes upstream
+- Added V2 model support (with groupsize, both inference + finetune)
+- Added some options on finetune: set default to use eos_token instead of padding, add resume_checkpoint to continue training
+- Added offload support. load_llama_model_4bit_low_ram_and_offload_to_cpu function can be used.
+- Added monkey patch for text generation webui for fixing initial eos token issue.
+- Added Flash attention support. (Use --flash-attention)
+- Added Triton backend to support model using groupsize and act-order. (Use --backend=triton)
+- Added g_idx support in cuda backend (need recompile cuda kernel)
+- Added xformers support
+- Removed triton, flash-atten from requirements.txt for compatibility
+- Removed bitsandbytes from requirements
+- Added pip installable branch based on winglian's PR
+- Added Model server for better inference performance with webui (40% faster than original webui which runs model and gradio in same process)
+- Added cuda backend quant attention and fused mlp from GPTQ_For_Llama.
+- Added lora patch for GPTQ_For_Llama repo triton backend.
+- Added support for llama2 GQA
+- Added support for flash attention 2
+- Updated install manual
+- Changed block size from 256 to 128 to support more 4bit models<br>
 
 # Finetune
 
@@ -87,7 +93,8 @@ python finetune.py ./data.txt \
     --logging_steps=5 \
     --groupsize=128 \
     --xformers \
-    --backend=cuda
+    --backend=cuda \
+    --val_set_size=0
 ```
 
 # Inference
@@ -101,11 +108,13 @@ python inference.py
 # Text Generation Webui Monkey Patch
 
 Clone the latest version of text generation webui and copy all the files into ./text-generation-webui/
+
 ```
 git clone https://github.com/oobabooga/text-generation-webui.git
 ```
 
 Open server.py and insert a line at the beginning
+
 ```
 import custom_monkey_patch # apply monkey patch
 ...
@@ -122,34 +131,35 @@ python server.py
 Currently the webui support using this repo by the monkeypatch inside it.<br>
 You can simply clone this repo to ./repositories/ in the path of text generation webui.
 
-
 # Flash Attention
 
 Currently with flash attention 2 support, and directly use flash_attn_func function. Only support Llama / Llama 2 based model now.
 
-* Just add --flash-attention to use it for finetuning.
-
+- Just add --flash-attention to use it for finetuning.
 
 # Xformers
 
-* Install
+- Install
+
 ```
 pip install xformers
 ```
 
-* Usage
+- Usage
+
 ```
 from monkeypatch.llama_attn_hijack_xformers import hijack_llama_attention
 hijack_llama_attention()
 ```
 
-* add --xformers to use it for finetuning.
+- add --xformers to use it for finetuning.
 
 # Quant Attention and MLP Patch
 
 Note: Currently does not support peft lora, but can use inject_lora_layers to load simple lora with only q_proj and v_proj.<br>
 
 Usage:
+
 ```python
 from model_attn_mlp_patch import make_quant_attn, make_fused_mlp, inject_lora_layers
 make_quant_attn(model)
@@ -160,6 +170,7 @@ inject_lora_layers(model, lora_path)
 ```
 
 Only for faster lora:
+
 ```python
 from monkeypatch.gptq_for_llala_lora_monkey_patch import inject_lora_layers
 inject_lora_layers(model, lora_path, device, dtype)
@@ -174,12 +185,14 @@ Simple expriment results:<br>
 improved from 13 tokens/sec to 20 tokens/sec
 
 <b>Step:</b>
+
 1. run model server process
 2. run webui process with monkey patch
 
 <b>Example</b>
 
 run_server.sh
+
 ```
 #!/bin/bash
 
@@ -195,6 +208,7 @@ python ./scripts/run_server.py --config_path $CONFIG_PATH --model_path $MODEL_PA
 ```
 
 run_webui.sh
+
 ```
 #!/bin/bash
 
@@ -212,6 +226,7 @@ python server2.py --chat --listen
 ```
 
 <b>Note:</b>
-* quant_attn only support torch 2.0+
-* lora support is only for simple lora with only q_proj and v_proj
-* this patch breaks model selection, lora selection and training feature in webui
+
+- quant_attn only support torch 2.0+
+- lora support is only for simple lora with only q_proj and v_proj
+- this patch breaks model selection, lora selection and training feature in webui
